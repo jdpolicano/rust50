@@ -44,8 +44,8 @@ impl CommandOptions {
             return Err(err_message)
         };
 
-        if let Some(file) = args.next() {
-            default.source.push_str(&file);
+        if let Some(i_file) = args.next() {
+            default.source.push_str(&i_file);
         } else {
             return Err(err_message)
         };

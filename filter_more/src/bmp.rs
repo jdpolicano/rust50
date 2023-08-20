@@ -1,6 +1,6 @@
 // Purpose: Library for filter_more
 use std::fs::File;
-use std::io::{self, Read, SeekFrom, Seek, Write};
+use std::io::{self, Read, SeekFrom, Seek, Write, BufReader, BufWriter};
 
 #[repr(C, packed)]
 pub struct BITMAPFILEHEADER {
@@ -26,10 +26,11 @@ pub struct BITMAPINFOHEADER {
     bi_clr_important: u32,
 }
 
+#[derive(Clone, Copy)]
 pub struct RGBTriple {
-    rgb_blue: u8,
-    rgb_green: u8,
-    rgb_red: u8,
+    pub rgb_blue: u8,
+    pub rgb_green: u8,
+    pub rgb_red: u8,
 }
 
 
@@ -64,14 +65,6 @@ impl Default for BITMAPINFOHEADER {
 }
 
 impl RGBTriple {
-    pub fn new() -> Self {
-        RGBTriple {
-            rgb_blue: 0,
-            rgb_green: 0,
-            rgb_red: 0,
-        }
-    }
-
     // Byte array's len guarenteed to be 3;
     pub fn from_u8_bytes(bytes: &[u8]) -> Self {
         RGBTriple {
@@ -108,12 +101,11 @@ pub fn write_out_struct<T: Sized, W: std::io::Write>(t: &T, mut writer: W) -> io
 }
 
 
-
 pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADER, Vec<Vec<RGBTriple>>)> {
-    let mut file = File::open(filename)?;
-    let bf: BITMAPFILEHEADER = read_in_struct(&mut file)?;
-    let bi: BITMAPINFOHEADER = read_in_struct(&mut file)?;
-
+    let file = File::open(filename)?;
+    let mut reader = BufReader::new(file);
+    let bf: BITMAPFILEHEADER = read_in_struct(&mut reader)?;
+    let bi: BITMAPINFOHEADER = read_in_struct(&mut reader)?;
     // Ensure infile is (likely) a 24-bit uncompressed BMP 4.0 - taken from filter_more impl...
     if bf.bf_type != 0x4d42 || bf.bf_off_bits != 54 || bi.bi_size != 40 ||
         bi.bi_bit_count != 24 || bi.bi_compression != 0
@@ -124,7 +116,7 @@ pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADE
     let height = bi.bi_height.abs();
     let width = bi.bi_width;
     let byte_alignment = 4;
-    let rgb_width = 3;;
+    let rgb_width = 3;
 
     // Determine padding for scanlines
     let padding = (byte_alignment - ((width * rgb_width) % byte_alignment)) % byte_alignment;
@@ -134,12 +126,12 @@ pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADE
         let mut rgb_triple_row: Vec<RGBTriple> = Vec::with_capacity((width) as usize);
         for _ in 0..width {
             let mut byte_triple: [u8; 3] = [0; 3];
-            file.read_exact(&mut byte_triple)?;
+            reader.read_exact(&mut byte_triple)?;
             let rgb_triple = RGBTriple::from_u8_bytes(&byte_triple);
             rgb_triple_row.push(rgb_triple);
         }
         // Skip over padding, if any
-        file.seek(SeekFrom::Current(padding as i64))?;
+        reader.seek(SeekFrom::Current(padding as i64))?;
         rgb_triples.push(rgb_triple_row);
     }
 
@@ -148,21 +140,25 @@ pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADE
 
 
 pub fn write_bmp(filename: &str, bf: &BITMAPFILEHEADER, bi: &BITMAPINFOHEADER, rgb_triple: &Vec<Vec<RGBTriple>>) -> io::Result<()> {
-    let mut file = File::create(filename)?;
-    let height = bi.bi_height.abs();
+    let file = File::create(filename)?;
+    let mut writer = BufWriter::new(file);
     let width = bi.bi_width;
     let byte_alignment = 4;
     let rgb_width = 3;
     // Determine padding for scanlines
     let padding = (byte_alignment - ((width * rgb_width) % byte_alignment)) % byte_alignment;
-    write_out_struct(bf, &mut file)?;
-    write_out_struct(bi, &mut file)?;
+
+    write_out_struct(bf, &mut writer)?;
+    write_out_struct(bi, &mut writer)?;
 
     for row in rgb_triple {
         for item in row {
-            file.write_all(&item.to_u8_bytes())?;
+            writer.write_all(&item.to_u8_bytes())?;
         }
-        file.write_all(&vec![0; padding as usize].as_slice())?;
+        let padding_buffer = [0u8; 4];  // Maximum padding for 32-bit alignment is 3 bytes, so 4 bytes buffer should suffice.
+        writer.write_all(&padding_buffer[0..padding as usize])?;
     }
+
+    writer.flush()?;
     Ok(())
 }
