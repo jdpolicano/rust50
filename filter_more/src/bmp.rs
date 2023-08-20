@@ -26,7 +26,13 @@ pub struct BITMAPINFOHEADER {
     bi_clr_important: u32,
 }
 
-#[derive(Clone, Copy)]
+/*
+Decided not to pack this one because there were issues with printing the 
+members with println!(). I assume users that are trying to debug their implementations
+of the different filters would rather not have to read this code to understand why they can't
+just print the damn thing...
+*/
+#[derive(Clone, Copy, Debug)]
 pub struct RGBTriple {
     pub rgb_blue: u8,
     pub rgb_green: u8,
