@@ -1,9 +1,9 @@
 // Purpose: Library for filter_more
 use std::fs::File;
-use std::io::{self, Read, SeekFrom, Seek, Write, BufReader, BufWriter};
+use std::io::{self, SeekFrom, Seek, Read, Write, BufReader, BufWriter};
 
 #[repr(C, packed)]
-pub struct BITMAPFILEHEADER {
+pub struct BitmapFileHeader {
     bf_type: u16,
     bf_size: u32,
     bf_reserved1: u16,
@@ -12,7 +12,7 @@ pub struct BITMAPFILEHEADER {
 }
 
 #[repr(C, packed)]
-pub struct BITMAPINFOHEADER {
+pub struct BitmapInfoHeader {
     bi_size: u32,
     bi_width: i32,
     bi_height: i32,
@@ -26,13 +26,7 @@ pub struct BITMAPINFOHEADER {
     bi_clr_important: u32,
 }
 
-/*
-Decided not to pack this one because there were issues with printing the 
-members with println!(). I assume users that are trying to debug their implementations
-of the different filters would rather not have to read this code to understand why they can't
-just print the damn thing...
-*/
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RGBTriple {
     pub rgb_blue: u8,
     pub rgb_green: u8,
@@ -40,9 +34,9 @@ pub struct RGBTriple {
 }
 
 
-impl Default for BITMAPFILEHEADER {
+impl Default for BitmapFileHeader {
     fn default() -> Self {
-        BITMAPFILEHEADER {
+        BitmapFileHeader {
             bf_type: 0,
             bf_size: 0,
             bf_reserved1: 0,
@@ -52,9 +46,9 @@ impl Default for BITMAPFILEHEADER {
     }
 }
 
-impl Default for BITMAPINFOHEADER {
+impl Default for BitmapInfoHeader {
     fn default() -> Self {
-        BITMAPINFOHEADER {
+        BitmapInfoHeader {
             bi_size: 0,
             bi_width: 0,
             bi_height: 0,
@@ -71,13 +65,16 @@ impl Default for BITMAPINFOHEADER {
 }
 
 impl RGBTriple {
-    // Byte array's len guarenteed to be 3;
-    pub fn from_u8_bytes(bytes: &[u8]) -> Self {
-        RGBTriple {
-            rgb_blue: bytes[0],
-            rgb_green: bytes[1],
-            rgb_red: bytes[2],
+    pub fn new(rgb_blue: u8, rgb_green: u8, rgb_red: u8) -> Self {
+        Self {
+            rgb_blue,
+            rgb_green,
+            rgb_red
         }
+    }
+
+    pub fn from_u8_bytes(bytes: &[u8; 3]) -> Self {
+        Self::new(bytes[0], bytes[1], bytes[2])
     }
 
     pub fn to_u8_bytes(&self) -> [u8; 3] {
@@ -107,11 +104,11 @@ pub fn write_out_struct<T: Sized, W: std::io::Write>(t: &T, mut writer: W) -> io
 }
 
 
-pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADER, Vec<Vec<RGBTriple>>)> {
+pub fn read_bmp(filename: &str) -> io::Result<(BitmapFileHeader, BitmapInfoHeader, Vec<Vec<RGBTriple>>)> {
     let file = File::open(filename)?;
     let mut reader = BufReader::new(file);
-    let bf: BITMAPFILEHEADER = read_in_struct(&mut reader)?;
-    let bi: BITMAPINFOHEADER = read_in_struct(&mut reader)?;
+    let bf: BitmapFileHeader = read_in_struct(&mut reader)?;
+    let bi: BitmapInfoHeader = read_in_struct(&mut reader)?;
     // Ensure infile is (likely) a 24-bit uncompressed BMP 4.0 - taken from filter_more impl...
     if bf.bf_type != 0x4d42 || bf.bf_off_bits != 54 || bi.bi_size != 40 ||
         bi.bi_bit_count != 24 || bi.bi_compression != 0
@@ -145,7 +142,7 @@ pub fn read_bmp(filename: &str) -> io::Result<(BITMAPFILEHEADER, BITMAPINFOHEADE
 }
 
 
-pub fn write_bmp(filename: &str, bf: &BITMAPFILEHEADER, bi: &BITMAPINFOHEADER, rgb_triple: &Vec<Vec<RGBTriple>>) -> io::Result<()> {
+pub fn write_bmp(filename: &str, bf: &BitmapFileHeader, bi: &BitmapInfoHeader, rgb_triple: &Vec<Vec<RGBTriple>>) -> io::Result<()> {
     let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);
     let width = bi.bi_width;
