@@ -1,4 +1,3 @@
-
 use crate::bmp::{RGBTriple};
 // For the purposes of the exercise, we'll define these contracts to edit the bitmap in-place.
 // This means that we'll be mutating the RGBTriple values in the Vec<Vec<RGBTriple>>.
