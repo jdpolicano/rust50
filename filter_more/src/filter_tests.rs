@@ -64,9 +64,15 @@ fn assert_images_equal(a: Vec<Vec<RGBTriple>>, b: Vec<Vec<RGBTriple>>) {
     }
 }
 
+fn assert_pixels_equal(a: RGBTriple, b: RGBTriple) {
+    assert_eq!(a.rgb_blue, b.rgb_blue);
+    assert_eq!(a.rgb_green, b.rgb_green);
+    assert_eq!(a.rgb_red, b.rgb_red);
+}
+
 mod grey_scale {
     use crate::filter::grey_scale;
-    use crate::test::{pixel, assert_images_equal, get_img1, get_img2, get_img3};
+    use crate::filter_tests::{pixel, assert_images_equal, get_img1, get_img2, get_img3};
 
     #[test]
     fn greyscale_single_pixel() {
@@ -162,11 +168,12 @@ mod grey_scale {
 
 mod reflect {
     use crate::filter::reflect;
-    use crate::test::{pixel, assert_images_equal, get_row2, get_row3, get_img1, get_img2, get_img3};
+    use crate::filter_tests::{pixel, assert_images_equal, get_row2, get_row3, get_img1, get_img2, get_img3};
 
     #[test]
     fn reflect_row_2() {
         let mut img = get_row2();
+
         reflect(&mut img);
         
         let expected = vec![
@@ -236,4 +243,143 @@ mod reflect {
         
         assert_images_equal(img, expected);
     }
+}
+
+mod blur {
+    use crate::filter::blur;
+    use crate::filter_tests::{pixel, assert_images_equal, assert_pixels_equal, get_img2, get_img3};
+
+    #[test]
+    fn blur_middle() {
+        let mut img = get_img2();
+
+        blur(&mut img);
+
+        let expected = pixel(127, 140, 149);
+    
+        assert_pixels_equal(img[1][1].clone(), expected);
+    }
+
+    #[test]
+    fn blur_edge() {
+        let mut img = get_img2();
+
+        blur(&mut img);
+
+        let expected = pixel(80, 95, 105);
+        
+        assert_pixels_equal(img[0][1].clone(), expected);
+    }
+
+    #[test]
+    fn blur_corner() {
+        let mut img = get_img2();
+
+        blur(&mut img);
+
+        let expected = pixel(70, 85, 95);
+        
+        assert_pixels_equal(img[0][0].clone(), expected);
+    }
+
+    #[test]
+    fn blur_3x3() {
+        let mut img = get_img2();
+
+        blur(&mut img);
+        
+        let expected = vec![
+            vec![pixel(70, 85, 95), pixel(80, 95, 105), pixel(90, 105, 115)],
+            vec![pixel(117, 130, 140), pixel(127, 140, 149), pixel(137, 150, 159)],
+            vec![pixel(163, 178, 188), pixel(170, 185, 194), pixel(178, 193, 201)],
+        ];
+        
+        assert_images_equal(img, expected);
+    }
+
+    #[test]
+    fn blur_4x4() {
+        let mut img = get_img3();
+
+        blur(&mut img);
+
+        let expected = vec![
+            vec![pixel(70, 85, 95), pixel(80, 95, 105), pixel(100, 115, 125), pixel(110, 125, 135)],
+            vec![pixel(113, 126, 136), pixel(123, 136, 145), pixel(142, 155, 163), pixel(152, 165, 173)],
+            vec![pixel(113, 119, 136), pixel(143, 151, 164), pixel(156, 166, 171), pixel(180, 190, 194)],
+            vec![pixel(113, 112, 132), pixel(155, 156, 171), pixel(169, 174, 177), pixel(203, 207, 209)],
+        ];
+        
+        assert_images_equal(img, expected);
+    }
+}
+
+mod edges {
+    use crate::filter::edges;
+    use crate::filter_tests::{pixel, assert_images_equal, assert_pixels_equal, get_img4, get_img5};
+
+    #[test]
+    fn edges_middle() {
+        let mut img = get_img4();
+
+        edges(&mut img);
+
+        let expected = pixel(210, 150, 60);
+    
+        assert_pixels_equal(img[1][1].clone(), expected);
+    }
+
+    #[test]
+    fn edges_edge() {
+        let mut img = get_img4();
+
+        edges(&mut img);
+
+        let expected = pixel(213, 228, 255);
+        
+        assert_pixels_equal(img[0][1].clone(), expected);
+    }
+
+    #[test]
+    fn edges_corner() {
+        let mut img = get_img4();
+
+        edges(&mut img);
+
+        let expected = pixel(76, 117, 255);
+        
+        assert_pixels_equal(img[0][0].clone(), expected);
+    }
+
+    #[test]
+    fn edges_3x3() {
+        let mut img = get_img4();
+
+        edges(&mut img);
+        
+        let expected = vec![
+            vec![pixel(76, 117, 255), pixel(213, 228, 255), pixel(192, 190, 255)],
+            vec![pixel(114, 102, 255), pixel(210, 150, 60), pixel(103, 108, 255)],
+            vec![pixel(114, 117, 255), pixel(200, 197, 255), pixel(210, 190, 255)],
+        ];
+        
+        assert_images_equal(img, expected);
+    }
+
+    #[test]
+    fn edges_4x4() {
+        let mut img = get_img5();
+
+        edges(&mut img);
+
+        let expected = vec![
+            vec![pixel(76, 117, 255), pixel(213, 228, 255), pixel(255, 255, 255), pixel(255, 255, 255)],
+            vec![pixel(114, 102, 255), pixel(210, 150, 60), pixel(177, 171, 156), pixel(250, 247, 255)],
+            vec![pixel(161, 89, 255), pixel(126, 128, 181), pixel(114, 170, 192), pixel(247, 220, 192)],
+            vec![pixel(148, 71, 156), pixel(133, 100, 121), pixel(181, 148, 212), pixel(212, 170, 255)],
+        ];
+        
+        assert_images_equal(img, expected);
+    }
+
 }

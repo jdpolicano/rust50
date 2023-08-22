@@ -13,7 +13,6 @@ pub enum CliFlag {
     Reflect,
 }
 
-
 impl CommandOptions {
     pub fn new() -> Self {
         Self {
