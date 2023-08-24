@@ -2,6 +2,7 @@
 use std::fs::File;
 use std::io::{self, SeekFrom, Seek, Read, Write, BufReader, BufWriter};
 
+/// Represents the file header of a BMP image.
 #[repr(C, packed)]
 pub struct BitmapFileHeader {
     bf_type: u16,
@@ -11,6 +12,7 @@ pub struct BitmapFileHeader {
     bf_off_bits: u32,
 }
 
+/// Represents the information header of a BMP image.
 #[repr(C, packed)]
 pub struct BitmapInfoHeader {
     bi_size: u32,
@@ -26,6 +28,7 @@ pub struct BitmapInfoHeader {
     bi_clr_important: u32,
 }
 
+/// Represents an RGB color with individual channels for blue, green, and red.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RGBTriple {
     pub rgb_blue: u8,
@@ -65,6 +68,7 @@ impl Default for BitmapInfoHeader {
 }
 
 impl RGBTriple {
+    /// Create a new RGBTriple with given blue, green, and red values.
     pub fn new(rgb_blue: u8, rgb_green: u8, rgb_red: u8) -> Self {
         Self {
             rgb_blue,
@@ -73,15 +77,20 @@ impl RGBTriple {
         }
     }
 
+    /// Construct an RGBTriple from a byte array.
     pub fn from_u8_bytes(bytes: &[u8; 3]) -> Self {
         Self::new(bytes[0], bytes[1], bytes[2])
     }
 
+    /// Convert the RGBTriple to a byte array.
     pub fn to_u8_bytes(&self) -> [u8; 3] {
         [self.rgb_blue, self.rgb_green, self.rgb_red]
     }
 }
 
+/// Read a struct from a reader, treating the struct as a mutable slice.
+///
+/// **Warning**: structs read this way should be packed...
 pub fn read_in_struct<T: Default + Sized, R: Read>(reader: &mut R) -> io::Result<T> {
     let mut t = T::default();
     reader.read_exact(unsafe {
@@ -93,6 +102,9 @@ pub fn read_in_struct<T: Default + Sized, R: Read>(reader: &mut R) -> io::Result
     Ok(t)
 }
 
+/// Write the given struct to a writer by treating the struct as an immutable slice.
+///
+/// **Warning**: structs written this way should be packed...
 pub fn write_out_struct<T: Sized, W: std::io::Write>(t: &T, mut writer: W) -> io::Result<()> {
     writer.write_all(unsafe {
         std::slice::from_raw_parts(
@@ -103,7 +115,7 @@ pub fn write_out_struct<T: Sized, W: std::io::Write>(t: &T, mut writer: W) -> io
     Ok(())
 }
 
-
+/// Read a BMP image from a file and return its headers and pixel data.
 pub fn read_bmp(filename: &str) -> io::Result<(BitmapFileHeader, BitmapInfoHeader, Vec<Vec<RGBTriple>>)> {
     let file = File::open(filename)?;
     let mut reader = BufReader::new(file);
@@ -141,7 +153,7 @@ pub fn read_bmp(filename: &str) -> io::Result<(BitmapFileHeader, BitmapInfoHeade
     Ok((bf, bi, rgb_triples))
 }
 
-
+/// Write a BMP image to a file using the given headers and pixel data.
 pub fn write_bmp(filename: &str, bf: &BitmapFileHeader, bi: &BitmapInfoHeader, rgb_triple: &Vec<Vec<RGBTriple>>) -> io::Result<()> {
     let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);

@@ -92,7 +92,7 @@ cd filter_more
 
 This directory is a dual library and cli crate that exposes the boilerplate functionality for reading in a `.bmp` image, parsing command line arguments, and then executing the appropriate filter operation based on the cli input.
 
-if you haven't already, you'll need the `rustc` (the rust compiler) as well as `cargo` (rust's package manager and build tool). You can find instructions on how to install and configure these tools locally at rhe offical [rust documentation page](https://doc.rust-lang.org/book/ch01-00-getting-started.html)
+if you haven't already, you'll need the `rustc` (the rust compiler) as well as `cargo` (rust's package manager and build tool). You can find instructions on how to install and configure these tools locally at the offical [rust documentation page](https://doc.rust-lang.org/book/ch01-00-getting-started.html)
 
 Let’s now take a look at some of the files provided to you as distribution code to get an understanding for what’s inside of them.
 
@@ -105,7 +105,7 @@ Perhaps most importantly for you, this file also defines a struct called `RGBTri
 
 Why are these structs useful? Well, recall that a file is just a sequence of bytes (or, ultimately, bits) on disk. But those bytes are generally ordered in such a way that the first few represent something, the next few represent something else, and so on. “File formats” exist because the world has standardized what bytes mean what. Now, we could just read a file from disk into RAM as one big array of bytes. And we could just remember that the byte at `array[i]` represents one thing, while the byte at `array[j]` represents another. But why not give some of those bytes names so that we can retrieve them from memory more easily? That’s precisely what the structs in bmp.rs allow us to do. Rather than think of some file as one long sequence of bytes, we can instead think of it as a sequence of structs.
 
-I'm fairly new to Rust so any feedback you have is more than welcome! If you root around the file more you'll find other rust features being used (i.e., traits, generics, BufWriters/Readers, etc.) but I've tried to keep the code as simple as possible to make it easier to understand.
+I'm fairly new to Rust so any feedback you have is more than welcome! If you root around the file more you'll find other Rust features being used (i.e., traits, generics, BufWriters/Readers, etc.) but I've tried to keep the code as simple as possible to make it easier to understand.
 
 ### cli.rs
 Now, let’s open up `cli.rs`. This file has been written already for you, but there are a couple important points worth noting here.
@@ -115,70 +115,57 @@ It defines a struct `CommandOptions` that simply encapsulates the functionality 
 As a note, there exist crates at the [crates.io](https://crates.io/) website that accomplish this very tast more elegantly. If you're interested you can check out library crates such as the   [structopt](https://crates.io/crates/structopt) crate which is well supported and has a lot of features we neglect to implement here.
 
 ### main.rs
-Now, let’s open up `main.rs`. This file is where the magic happens. It defines a function called `main` that includes
-<!-- 
-First, notice the definition of filters on line 11. That string tells the program what the allowable command-line arguments to the program are: b, e, g, and r. Each of them specifies a different filter that we might apply to our images: blur, edge detection, grayscale, and reflection.
+Now, let’s open up `main.rs`. This is the orchestrator of the program and wraps the functionality of all of the helper libraries. It takes in the command line arguments passed to the program, then parses those arguments and executes the appropriate filter function based on the flag passed in. It then writes the resulting image to the output file specified by the user. Most of the heavy lifting is done else where, main provides a clear point of entry.
 
-The next several lines open up an image file, make sure it’s indeed a BMP file, and read all of the pixel information into a 2D array called image.
+### lib.rs
+Because this is a dual package we've elected to have a lib.rs file that delcares all of the separate modules and exposes them to the rest of the program. This is a common pattern in Rust and allows us to keep the code organized and modular. It also declares the test module which is used to run the unit tests for the program.
 
-Scroll down to the switch statement that begins on line 102. Notice that, depending on what filter we’ve chosen, a different function is called: if the user chooses filter b, the program calls the blur function; if e, then edges is called; if g, then grayscale is called; and if r, then reflect is called. Notice, too, that each of these functions take as arguments the height of the image, the width of the image, and the 2D array of pixels.
+### filter.rs
+Finally, let’s open up `filter.rs`. This is where you'll be doing most of your work. It contains the functions that actually implement the filters. You'll notice that each function takes a mutable reference to a vector of `RGBTriple` structs. This is because we want to mutate the vector in place rather than returning a new vector. This is a common pattern in Rust and is a good way to avoid unnecessary allocations. For now we've included the function signatures for each of the filters you'll be implementing. You'll need to fill in the bodies of these functions to get the program to work by removing the `todo!(...)` macro and replacing it with your own implementation. You should also remove the compiler directives above each function as you go, they are there to prevent the compiler from complaining about unused code.
 
-These are the functions you’ll (soon!) implement. As you might imagine, the goal is for each of these functions to edit the 2D array of pixels in such a way that the desired filter is applied to the image.
+### test.rs
+These are the unit tests that will verify if you've solved the problem correctly. You can run them by executing `cargo test` from the command line. You'll notice that we've included a test for each of the filters you'll be implementing. You can add your own tests here if you'd like, but you shouldn't need to. If you're interested in learning more about testing in Rust you can check out the [Rust Book](https://doc.rust-lang.org/book/ch11-00-testing.html) for more information.
 
-The remaining lines of the program take the resulting image and write them out to a new image file.
+## Compiling
+Rust makes it easy to compile and run your program. From the command line, execute the below.
+```sh
+$ cargo run -- -g images/yard.bmp out.bmp
+```
+This takes the image at images/yard.bmp, and generates a new image called out.bmp after running the pixels through the grayscale function. grayscale doesn’t do anything just yet, though, so the output image should look the same as the original yard.
 
-helpers.h
-Next, take a look at helpers.h. This file is quite short, and just provides the function prototypes for the functions you saw earlier.
-
-Here, take note of the fact that each function takes a 2D array called image as an argument, where image is an array of height many rows, and each row is itself another array of width many RGBTRIPLEs. So if image represents the whole picture, then image[0] represents the first row, and image[0][0] represents the pixel in the upper-left corner of the image.
-
-helpers.c
-Now, open up helpers.c. Here’s where the implementation of the functions declared in helpers.h belong. But note that, right now, the implementations are missing! This part is up to you.
-
-Makefile
-Finally, let’s look at Makefile. This file specifies what should happen when we run a terminal command like make filter. Whereas programs you may have written before were confined to just one file, filter seems to use multiple files: filter.c, bmp.h, helpers.h, and helpers.c. So we’ll need to tell make how to compile this file.
-
-Try compiling filter for yourself by going to your terminal and running
-
-$ make filter
-Then, you can run the program by running:
-
-$ ./filter -g images/yard.bmp out.bmp
-which takes the image at images/yard.bmp, and generates a new image called out.bmp after running the pixels through the grayscale function. grayscale doesn’t do anything just yet, though, so the output image should look the same as the original yard.
+Notice that in order to pass command line arguments to the program we need to use the `--` flag to tell cargo that the arguments that follow are for the program and not for cargo itself. This is used to pass arguments to the program being executed rather than the build tool.
 
 Specification
-Implement the functions in helpers.c such that a user can apply grayscale, reflection, blur, or edge detection filters to their images.
+Implement the functions in filter.rs such that a user can apply grayscale, reflection, blur, or edge detection filters to their images.
 
 The function grayscale should take an image and turn it into a black-and-white version of the same image.
+
 The reflect function should take an image and reflect it horizontally.
 The blur function should take an image and turn it into a box-blurred version of the same image.
+
 The edges function should take an image and highlight the edges between objects, according to the Sobel operator.
+
 You should not modify any of the function signatures, nor should you modify any other files other than helpers.c.
 
-Walkthrough
-Please note that there are 5 videos in this playlist.
 
-
-Usage
+## Usage
 Your program should behave per the examples below.
 
+```sh
 $ ./filter -g infile.bmp outfile.bmp
 $ ./filter -r infile.bmp outfile.bmp
 $ ./filter -b infile.bmp outfile.bmp
 $ ./filter -e infile.bmp outfile.bmp
+```
 
-Hints
-The values of a pixel’s rgbtRed, rgbtGreen, and rgbtBlue components are all integers, so be sure to round any floating-point numbers to the nearest integer when assigning them to a pixel value!
-Testing
+## Hints
+The values of a pixel’s `rgb_red`, `rgb_green`, and `rgb_blue` components are all integers, so be sure to round any floating-point numbers to the nearest integer when assigning them to a pixel value!
+
+## Testing
 Be sure to test all of your filters on the sample bitmap files provided!
 
-Execute the below to evaluate the correctness of your code using check50. But be sure to compile and test it yourself as well!
+Execute the below to evaluate the correctness of your code using Rust's build in unit testing functionality.
 
-check50 cs50/problems/2020/x/filter/more
-Execute the below to evaluate the style of your code using style50.
-
-style50 helpers.c
-How to Submit
-Execute the below, logging in with your GitHub username and password when prompted. For security, you’ll see asterisks (*) instead of the actual characters in your password.
-
-submit50 cs50/problems/2020/x/filter/more -->
+```sh
+$ cargo test
+```
