@@ -135,7 +135,7 @@ This takes the image at images/yard.bmp, and generates a new image called out.bm
 
 Notice that in order to pass command line arguments to the program we need to use the `--` flag to tell cargo that the arguments that follow are for the program and not for cargo itself. This is used to pass arguments to the program being executed rather than the build tool.
 
-Specification
+## Specification
 Implement the functions in filter.rs such that a user can apply grayscale, reflection, blur, or edge detection filters to their images.
 
 The function grayscale should take an image and turn it into a black-and-white version of the same image.
